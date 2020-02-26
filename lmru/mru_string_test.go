@@ -25,6 +25,7 @@ func TestMRU(t *testing.T) {
 			t.Fail()
 		}
 
+		c <- time.Unix(5, 0)
 		c <- time.Unix(6, 0)
 		_, ok = m.Get("demo1")
 		if ok {
