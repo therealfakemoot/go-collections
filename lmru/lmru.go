@@ -8,6 +8,18 @@ import (
 	"time"
 )
 
+// New{{ .Name}} creates a {{ .Name }} and prepares it for use.
+// Note: The {{ .Name }} will NOT start cleanup until you run Start().
+func New{{ .Name}}(t time.Duration) *{{ .Name }} {
+	m := {{ .Name }}{
+		timeout: t,
+		m: make(map[string]{{ .Type }}),
+		c: make(map[string]time.Time),
+	}
+
+	return &m
+}
+
 {{ if .L }}// {{ .Name }} is a map that evicts items based on their last time of use.{{ else }}// {{ .Name }} is a map that evicts items based on their last time of use.{{ end }}
 type {{ .Name }} struct {
 	sync.Mutex
