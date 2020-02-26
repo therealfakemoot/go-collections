@@ -45,7 +45,7 @@ func main() {
 		log.Fatalf("error formatting generated code: %s", err)
 	}
 
-	err = os.Stdout.Write(formatted)
+	_, err = os.Stdout.Write(formatted)
 	if err != nil {
 		log.Fatalf("error writing generated code: %s", err)
 	}
