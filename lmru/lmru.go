@@ -12,8 +12,8 @@ import (
 func New{{ .Name}}(t time.Duration) *{{ .Name }} {
 	m := {{ .Name }}{
 		timeout: t,
-		m: make(map[string]{{ .Type }}),
-		c: make(map[string]time.Time),
+		cache: make(map[string]{{ .Type }}),
+		inserts: make(map[string]time.Time),
 	}
 
 	return &m
@@ -23,15 +23,15 @@ func New{{ .Name}}(t time.Duration) *{{ .Name }} {
 type {{ .Name }} struct {
 	sync.Mutex
 	timeout time.Duration
-	m       map[string]{{ .Type }}      // this is the payload data
-	c       map[string]time.Time // maps each key to its insertion time
+	cache       map[string]{{ .Type }}      // this is the payload data
+	inserts       map[string]time.Time // maps each key to its insertion time
 }
 
 // Get returns the value associated with k
 func (m *{{ .Name }}) Get(k string) (string, bool) {
        m.Lock()
        defer m.Unlock()
-       v, ok := m.m[k]
+       v, ok := m.cache[k]
        return v, ok
 }
 
@@ -44,23 +44,22 @@ func (m *{{ .Name }}) Set(k string, v {{ .Type }}) {
 func (m *{{ .Name }}) SetWithTimestamp(k string, v {{ .Type }}, t time.Time) {
 	m.Lock()
 	defer m.Unlock()
-	m.m[k] = v
-	m.c[k] = t
+	m.cache[k] = v
+	m.inserts[k] = t
 }
 
 // Start begins the goroutine that cleans up entries from the LMRU.
 func (m *{{ .Name }}) Start(c chan time.Time) {
-	go func() {
 		for t := range c {
 			m.Lock()
-			for k := range m.m {
-				if t.Sub(m.c[k]){{if .L}} < {{ else }} > {{ end }}m.timeout {
-					delete(m.m, k)
+			for k := range m.cache {
+				if t.Sub(m.inserts[k]){{if .L}} < {{ else }} > {{ end }}m.timeout {
+					delete(m.cache, k)
+					delete(m.inserts, k)
 				}
 
 			}
 			m.Unlock()
 		}
-	}()
 }
 `

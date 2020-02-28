@@ -10,8 +10,8 @@ import (
 func NewMRUString(t time.Duration) *MRUString {
 	m := MRUString{
 		timeout: t,
-		m:       make(map[string]string),
-		c:       make(map[string]time.Time),
+		cache:   make(map[string]string),
+		inserts: make(map[string]time.Time),
 	}
 
 	return &m
@@ -21,15 +21,15 @@ func NewMRUString(t time.Duration) *MRUString {
 type MRUString struct {
 	sync.Mutex
 	timeout time.Duration
-	m       map[string]string    // this is the payload data
-	c       map[string]time.Time // maps each key to its insertion time
+	cache   map[string]string    // this is the payload data
+	inserts map[string]time.Time // maps each key to its insertion time
 }
 
 // Get returns the value associated with k
 func (m *MRUString) Get(k string) (string, bool) {
 	m.Lock()
 	defer m.Unlock()
-	v, ok := m.m[k]
+	v, ok := m.cache[k]
 	return v, ok
 }
 
@@ -42,22 +42,21 @@ func (m *MRUString) Set(k string, v string) {
 func (m *MRUString) SetWithTimestamp(k string, v string, t time.Time) {
 	m.Lock()
 	defer m.Unlock()
-	m.m[k] = v
-	m.c[k] = t
+	m.cache[k] = v
+	m.inserts[k] = t
 }
 
 // Start begins the goroutine that cleans up entries from the LMRU.
 func (m *MRUString) Start(c chan time.Time) {
-	go func() {
-		for t := range c {
-			m.Lock()
-			for k := range m.m {
-				if t.Sub(m.c[k]) > m.timeout {
-					delete(m.m, k)
-				}
-
+	for t := range c {
+		m.Lock()
+		for k := range m.cache {
+			if t.Sub(m.inserts[k]) > m.timeout {
+				delete(m.cache, k)
+				delete(m.inserts, k)
 			}
-			m.Unlock()
+
 		}
-	}()
+		m.Unlock()
+	}
 }
