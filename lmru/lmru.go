@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+type Eviction struct {
+	Key string
+	Value {{ .Type }}
+	Lifetime time.Duration
+}
+
 // New{{ .Name}} creates a {{ .Name }} and prepares it for use.
 // Note: The {{ .Name }} will NOT start cleanup until you run Start().
 func New{{ .Name}}(t time.Duration) *{{ .Name }} {
@@ -32,6 +38,9 @@ func (m *{{ .Name }}) Get(k string) (string, bool) {
        m.Lock()
        defer m.Unlock()
        v, ok := m.cache[k]
+       if ok {
+	       m.inserts[k] = time.Now()
+       }
        return v, ok
 }
 
@@ -49,13 +58,21 @@ func (m *{{ .Name }}) SetWithTimestamp(k string, v {{ .Type }}, t time.Time) {
 }
 
 // Start begins the goroutine that cleans up entries from the LMRU.
-func (m *{{ .Name }}) Start(c chan time.Time) {
+func (m *{{ .Name }}) Start(c chan time.Time, e chan Eviction) {
 		for t := range c {
 			m.Lock()
 			for k := range m.cache {
-				if t.Sub(m.inserts[k]){{if .L}} < {{ else }} > {{ end }}m.timeout {
+				lifetime := t.Sub(m.inserts[k])
+				if lifetime{{if .L}} < {{ else }} > {{ end }}m.timeout {
+				var eviction Eviction
+				if e != nil {
+					eviction.Key = k
+					eviction.Value = m.cache[k]
+					eviction.Lifetime = lifetime
+				}
 					delete(m.cache, k)
 					delete(m.inserts, k)
+					e <- eviction
 				}
 
 			}

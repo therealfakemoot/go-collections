@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+type Eviction struct {
+	Key      string
+	Value    string
+	Lifetime time.Duration
+}
+
 // NewMRUString creates a MRUString and prepares it for use.
 // Note: The MRUString will NOT start cleanup until you run Start().
 func NewMRUString(t time.Duration) *MRUString {
@@ -47,13 +53,21 @@ func (m *MRUString) SetWithTimestamp(k string, v string, t time.Time) {
 }
 
 // Start begins the goroutine that cleans up entries from the LMRU.
-func (m *MRUString) Start(c chan time.Time) {
+func (m *MRUString) Start(c chan time.Time, e chan Eviction) {
 	for t := range c {
 		m.Lock()
 		for k := range m.cache {
-			if t.Sub(m.inserts[k]) > m.timeout {
+			lifetime := t.Sub(m.inserts[k])
+			if lifetime > m.timeout {
+				var eviction Eviction
+				if e != nil {
+					eviction.Key = k
+					eviction.Value = m.cache[k]
+					eviction.Lifetime = lifetime
+				}
 				delete(m.cache, k)
 				delete(m.inserts, k)
+				e <- eviction
 			}
 
 		}
