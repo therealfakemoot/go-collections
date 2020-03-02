@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Eviction contains information about keys evicted from the cache
 type Eviction struct {
 	Key      string
 	Value    string
