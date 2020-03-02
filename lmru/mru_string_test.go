@@ -36,13 +36,11 @@ func TestMRU(t *testing.T) {
 		t.Logf("T: +6s")
 		c <- time.Unix(6, 0)
 		select {
-		case _, _ = <-e:
-			t.Logf("eviction received")
-			break // break the select and continue to the rest of the test body???
-		default:
-			t.Logf("expected eviction, none happened")
-			t.Fail()
+		case <-e:
+			return
 		}
+		t.Logf("expected eviction, none happened")
+		t.Fail()
 	})
 
 }
