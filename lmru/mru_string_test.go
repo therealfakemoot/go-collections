@@ -17,14 +17,13 @@ func dummyMRU() *MRUString {
 }
 
 func TestMRU(t *testing.T) {
-	t.Run("short test", func(t *testing.T) {
+	t.Run("single eviction", func(t *testing.T) {
 		m := dummyMRU()
 		c := make(chan time.Time)
 		e := make(chan Eviction)
 		go m.Start(c, e)
 
-		t.Logf("T: +4s")
-		c <- time.Unix(4, 0)
+		c <- time.Unix(5, 0)
 		select {
 		case ev, _ := <-e:
 			t.Logf("received unexpected eviction: %+v", ev)
@@ -36,11 +35,16 @@ func TestMRU(t *testing.T) {
 		t.Logf("T: +6s")
 		c <- time.Unix(6, 0)
 		select {
-		case <-e:
+		case member := <-e:
+			if member.Key != "demo1" {
+				t.Logf("expected demo1 to be evicted, received %s", member.Key)
+				t.Fail()
+			}
 			return
+		case <-time.After(time.Second * 10):
+			t.Logf("timeout exceeded")
+			t.Fail()
 		}
-		t.Logf("expected eviction, none happened")
-		t.Fail()
 	})
 
 }
