@@ -36,6 +36,9 @@ func (m *MRUString) Get(k string) (string, bool) {
 	m.Lock()
 	defer m.Unlock()
 	v, ok := m.cache[k]
+	if ok {
+		m.inserts[k] = time.Now()
+	}
 	return v, ok
 }
 
